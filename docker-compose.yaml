@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  coco-application-gateway:
+    image: mrzack/coco-application-gateway:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "./conf:/app/conf:ro"
+      - "./certs:/app/certs:ro"
