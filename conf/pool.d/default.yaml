@@ -1,0 +1,14 @@
+probes:
+  - name: 200healthcheck
+    path: "/healthcheck"
+    https: false
+    statusCode: 200
+
+pools:
+  - name: DefaultPool
+    healthProbeName: 200healthcheck
+    servers:
+      - name: server01
+        hostname: hellogo1
+      - name: server02
+        hostname: hellogo2

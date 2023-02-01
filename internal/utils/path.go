@@ -7,7 +7,7 @@ import (
 	"github.com/mrzack99s/coco-application-gateway/internal/vars"
 )
 
-func FindEndpointMatchPathMatch(hostname, rpath string, https bool) *types.RouteEndpointType {
+func FindEndpointMatchPathMatch(hostname, rpath string, https bool) (types.RouteEndpointType, bool) {
 
 	routes := vars.HTTPRouting
 	if https {
@@ -23,7 +23,7 @@ func FindEndpointMatchPathMatch(hostname, rpath string, https bool) *types.Route
 				continue
 			} else {
 				endpoint := routes["_default"][routePath]
-				return &endpoint
+				return endpoint, true
 			}
 		}
 
@@ -38,9 +38,23 @@ func FindEndpointMatchPathMatch(hostname, rpath string, https bool) *types.Route
 			continue
 		} else {
 			endpoint := routes[hostname][routePath]
-			return &endpoint
+			return endpoint, true
 		}
 	}
 
-	return nil
+	return types.RouteEndpointType{}, false
+}
+
+func FindMatchHostname(hostname string, https bool) string {
+
+	routes := vars.HTTPRouting
+	if https {
+		routes = vars.HTTPSRouting
+	}
+
+	if _, ok := routes[hostname]; ok {
+		return hostname
+	}
+
+	return "_default"
 }

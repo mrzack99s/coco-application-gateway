@@ -1,0 +1,8 @@
+properties:
+  ssl:
+    enable: true
+    keyPath: "./certs/privkey.key"
+    certPath: "./certs/certificate.crt"
+  port:
+    http: 80
+    https: 443
