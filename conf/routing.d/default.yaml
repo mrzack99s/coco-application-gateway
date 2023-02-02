@@ -4,10 +4,8 @@ http:
       wafEnable: true
       rateLimit:
         requestPerSecond: 100
-      ipWhiteList:
-        - cidr: 172.16.0.0/12
     routes:
-      - path: /hello[\w\/?=.]*
+      - path: /hello[\w\-/?=.% ]**
         action: loadbalancer
         backendPoolName: DefaultPool
         https: false

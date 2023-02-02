@@ -20,13 +20,27 @@ func HttpJSONRequestWithBytesResponse(method, fullURL, forwardFor string, header
 		},
 	}
 
-	header.Del("Accept-Encoding")
+	needRemove := []string{"Accept-Encoding", "Origin", "Referer"}
+	oldHeader := header.Clone()
+
+	for _, v := range needRemove {
+		header.Del(v)
+	}
+
 	header.Add("X-Client-IP", forwardFor)
+	header.Add("X-Forward-For", forwardFor)
+
 	req.Header = header
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
+
+	newRespHeader := resp.Header.Clone()
+	for _, v := range needRemove {
+		newRespHeader.Add(v, oldHeader.Get(v))
+	}
+	resp.Header = newRespHeader
 
 	return resp, err
 }

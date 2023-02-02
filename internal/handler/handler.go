@@ -65,9 +65,12 @@ func Serve(sslEnable bool) func(ctx *gin.Context) {
 			}
 		}
 
-		regex := regexp.MustCompile(`(/[\w-_/]+)`)
+		regex := regexp.MustCompile(`/[\w-/]*`)
 		matchBaseURL := regex.FindString(endpoint.Path)
 		uri = strings.Replace(uri, matchBaseURL, "", 1)
+		if len(uri) == 0 || uri[0] != '/' {
+			uri = "/" + uri
+		}
 
 		if wafEnable {
 			tx := vars.WAF.NewTransaction()
@@ -124,6 +127,7 @@ func Serve(sslEnable bool) func(ctx *gin.Context) {
 				response(ctx, resp.StatusCode, resp.Header.Get("Content-Type"), buf.Bytes())
 
 			case constants.ACTION_PROXY:
+
 				resp, err := utils.HttpJSONRequestWithBytesResponse(
 					request.Method,
 					fmt.Sprintf("%s%s", endpoint.To, uri),
