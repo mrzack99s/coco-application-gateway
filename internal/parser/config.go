@@ -69,7 +69,7 @@ func ParsePoolConfig() {
 }
 
 func ParseRoutingConfig() {
-	dirName := "./conf/routing.d/"
+	dirName := "./conf/rule.d/"
 	files, err := os.ReadDir(dirName)
 	if err != nil {
 		panic(err)
@@ -91,13 +91,7 @@ func ParseRoutingConfig() {
 
 			for _, http := range routing.HTTP {
 
-				if _, ok := vars.HTTPRouting[http.Hostname]; !ok {
-					vars.HTTPRouting[http.Hostname] = make(map[string]types.RouteEndpointType)
-				}
-
-				for _, route := range http.Routes {
-					vars.HTTPRouting[http.Hostname][route.Path] = route
-				}
+				vars.HTTPRules[http.Hostname] = http
 
 				features.WAFHttp[http.Hostname] = http.Features.WAFEnable
 				features.RateLimitHttp[http.Hostname] = http.Features.RateLimit
@@ -119,13 +113,7 @@ func ParseRoutingConfig() {
 
 			for _, https := range routing.HTTPS {
 
-				if _, ok := vars.HTTPSRouting[https.Hostname]; !ok {
-					vars.HTTPSRouting[https.Hostname] = make(map[string]types.RouteEndpointType)
-				}
-
-				for _, route := range https.Routes {
-					vars.HTTPSRouting[https.Hostname][route.Path] = route
-				}
+				vars.HTTPSRules[https.Hostname] = https
 
 				features.WAFHttps[https.Hostname] = https.Features.WAFEnable
 

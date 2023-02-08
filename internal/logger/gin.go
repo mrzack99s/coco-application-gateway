@@ -23,23 +23,12 @@ func GetGinLog(https bool) gin.HandlerFunc {
 			}
 
 			msg := ""
-			endpoint, foundEndpoint := utils.FindEndpointMatchPathMatch(hostname, param.Path, false)
+			endpoint, foundEndpoint := utils.FindRuleEndpoint(hostname, false)
 
 			if foundEndpoint {
 
-				switch endpoint.Action {
-				case constants.ACTION_LOAD_BALANCER:
-					appGwAction = constants.ACTION_LOAD_BALANCER
-					msg = fmt.Sprintf(", poolName=%s", endpoint.BackendPoolName)
-				case constants.ACTION_PROXY:
-					appGwAction = constants.ACTION_PROXY
-					msg = fmt.Sprintf(", to=%s", endpoint.To)
-				case constants.ACTION_REDIRECT:
-					appGwAction = constants.ACTION_REDIRECT
-					msg = fmt.Sprintf(", to=%s", endpoint.To)
-				case constants.ACTION_STRING:
-					appGwAction = constants.ACTION_STRING
-				}
+				appGwAction = constants.ACTION_LOAD_BALANCER
+				msg = fmt.Sprintf(", poolName=%s", endpoint.Backend.PoolName)
 
 			}
 
@@ -68,23 +57,12 @@ func GetGinLog(https bool) gin.HandlerFunc {
 		}
 
 		msg := ""
-		endpoint, foundEndpoint := utils.FindEndpointMatchPathMatch(hostname, param.Path, false)
+		endpoint, foundEndpoint := utils.FindRuleEndpoint(hostname, false)
 
 		if foundEndpoint {
 
-			switch endpoint.Action {
-			case constants.ACTION_LOAD_BALANCER:
-				appGwAction = constants.ACTION_LOAD_BALANCER
-				msg = fmt.Sprintf(", poolName=%s", endpoint.BackendPoolName)
-			case constants.ACTION_PROXY:
-				appGwAction = constants.ACTION_PROXY
-				msg = fmt.Sprintf(", to=%s", endpoint.To)
-			case constants.ACTION_REDIRECT:
-				appGwAction = constants.ACTION_REDIRECT
-				msg = fmt.Sprintf(", to=%s", endpoint.To)
-			case constants.ACTION_STRING:
-				appGwAction = constants.ACTION_STRING
-			}
+			appGwAction = constants.ACTION_LOAD_BALANCER
+			msg = fmt.Sprintf(", poolName=%s", endpoint.Backend.PoolName)
 
 		}
 

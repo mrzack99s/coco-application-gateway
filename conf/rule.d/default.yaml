@@ -1,0 +1,17 @@
+http:
+  - hostname: _default
+    features:
+      wafEnable: true
+      rateLimit:
+        requestPerSecond: 100
+    backend:
+      poolName: DefaultPool
+      https: false
+      loadBalancerMode: round-robin
+https:
+  - hostname: _default
+    wafEnable: true
+    backend:
+      poolName: DefaultPool
+      https: false
+      loadBalancerMode: round-robin

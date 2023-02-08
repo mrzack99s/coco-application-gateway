@@ -5,11 +5,9 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mrzack99s/coco-application-gateway/internal/constants"
 	"github.com/mrzack99s/coco-application-gateway/internal/features"
 	"github.com/mrzack99s/coco-application-gateway/internal/loadbalancer"
 	"github.com/mrzack99s/coco-application-gateway/internal/types"
@@ -27,49 +25,42 @@ func Serve(sslEnable bool) func(ctx *gin.Context) {
 			hostname = tmp[0]
 		}
 
-		path := request.URL.Path
 		uri := request.URL.RequestURI()
 
-		var endpoint types.RouteEndpointType
+		var mHostname string
+		var endpoint types.RuleType
 		var foundEndpoint bool
 		wafEnable := false
 
 		if sslEnable {
-			endpoint, foundEndpoint = utils.FindEndpointMatchPathMatch(hostname, path, true)
-			if isEnable, ok := features.WAFHttps[utils.FindMatchHostname(hostname, true)]; ok {
+			mHostname = utils.FindMatchHostname(hostname, true)
+			if isEnable, ok := features.WAFHttps[mHostname]; ok {
 				wafEnable = isEnable
 			}
 
-			if limiter, ok := features.RateLimitHttps[utils.FindMatchHostname(hostname, true)]; ok {
+			if limiter, ok := features.RateLimitHttps[mHostname]; ok {
 				limiter.Limiter.Take()
 			}
 
-			if !features.CheckWhiteList(utils.FindMatchHostname(hostname, true), ctx.ClientIP(), true) {
+			if !features.CheckWhiteList(mHostname, ctx.ClientIP(), true) {
 				return403(ctx, fmt.Sprintf("sorry, your ip %s is not authorized", ctx.ClientIP()))
 				return
 			}
 
 		} else {
-			endpoint, foundEndpoint = utils.FindEndpointMatchPathMatch(hostname, path, false)
-			if isEnable, ok := features.WAFHttp[utils.FindMatchHostname(hostname, false)]; ok {
+			mHostname = utils.FindMatchHostname(hostname, false)
+			if isEnable, ok := features.WAFHttp[mHostname]; ok {
 				wafEnable = isEnable
 			}
 
-			if limiter, ok := features.RateLimitHttp[utils.FindMatchHostname(hostname, true)]; ok {
+			if limiter, ok := features.RateLimitHttp[mHostname]; ok {
 				limiter.Limiter.Take()
 			}
 
-			if !features.CheckWhiteList(utils.FindMatchHostname(hostname, true), ctx.ClientIP(), false) {
+			if !features.CheckWhiteList(mHostname, ctx.ClientIP(), false) {
 				return403(ctx, fmt.Sprintf("sorry, your ip %s is not authorized", ctx.ClientIP()))
 				return
 			}
-		}
-
-		regex := regexp.MustCompile(`/[\w-/]*`)
-		matchBaseURL := regex.FindString(endpoint.Path)
-		uri = strings.Replace(uri, matchBaseURL, "", 1)
-		if len(uri) == 0 || uri[0] != '/' {
-			uri = "/" + uri
 		}
 
 		if wafEnable {
@@ -85,80 +76,48 @@ func Serve(sslEnable bool) func(ctx *gin.Context) {
 
 		}
 
+		endpoint, foundEndpoint = vars.HTTPRules[mHostname]
+
 		if foundEndpoint {
-
-			switch endpoint.Action {
-			case constants.ACTION_LOAD_BALANCER:
-				beIndex := loadbalancer.RR[endpoint.BackendPoolName].Next()
-				if beIndex == -1 {
-					return502(ctx)
-					return
-				}
-
-				be := vars.BackendPools[endpoint.BackendPoolName].Servers[beIndex]
-
-				var fullUrl string
-				if endpoint.Https {
-					fullUrl = fmt.Sprintf("https://%s%s", be.Hostname, uri)
-				} else {
-					fullUrl = fmt.Sprintf("http://%s%s", be.Hostname, uri)
-				}
-
-				resp, err := utils.HttpJSONRequestWithBytesResponse(
-					request.Method,
-					fullUrl,
-					ctx.ClientIP(),
-					request.Header,
-					request.Body,
-				)
-				if err != nil {
-					return502(ctx)
-					return
-				}
-
-				buf := new(bytes.Buffer)
-				_, err = buf.ReadFrom(resp.Body)
-				if err != nil {
-					fmt.Println(err)
-					os.Exit(1)
-				}
-				resp.Body.Close()
-
-				response(ctx, resp.StatusCode, resp.Header.Get("Content-Type"), buf.Bytes())
-
-			case constants.ACTION_PROXY:
-
-				resp, err := utils.HttpJSONRequestWithBytesResponse(
-					request.Method,
-					fmt.Sprintf("%s%s", endpoint.To, uri),
-					ctx.ClientIP(),
-					request.Header,
-					request.Body,
-				)
-				if err != nil {
-					return502(ctx)
-					return
-				}
-
-				buf := new(bytes.Buffer)
-				_, err = buf.ReadFrom(resp.Body)
-				if err != nil {
-					fmt.Println(err)
-					os.Exit(1)
-				}
-				resp.Body.Close()
-
-				response(ctx, resp.StatusCode, resp.Header.Get("Content-Type"), buf.Bytes())
-			case constants.ACTION_REDIRECT:
-				ctx.Redirect(302, endpoint.To)
-			case constants.ACTION_STRING:
-				ctx.String(endpoint.Response.StatusCode, endpoint.Response.Message)
-			default:
+			beIndex := loadbalancer.RR[endpoint.Backend.PoolName].Next()
+			if beIndex == -1 {
 				return502(ctx)
+				return
 			}
 
+			be := vars.BackendPools[endpoint.Backend.PoolName].Servers[beIndex]
+
+			var fullUrl string
+			if endpoint.Backend.Https {
+				fullUrl = fmt.Sprintf("https://%s%s", be.Hostname, uri)
+			} else {
+				fullUrl = fmt.Sprintf("http://%s%s", be.Hostname, uri)
+			}
+
+			resp, err := utils.HttpJSONRequestWithBytesResponse(
+				request.Method,
+				fullUrl,
+				ctx.ClientIP(),
+				request.Header,
+				request.Body,
+			)
+			if err != nil {
+				return502(ctx)
+				return
+			}
+
+			buf := new(bytes.Buffer)
+			_, err = buf.ReadFrom(resp.Body)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+			resp.Body.Close()
+
+			response(ctx, resp.StatusCode, resp.Header.Get("Content-Type"), buf.Bytes())
 		} else {
 			return502(ctx)
+			return
 		}
 
 	}
